@@ -21,7 +21,10 @@ import torch
 from pydub import AudioSegment
 
 # Import existing helper functions
-from ctc_forced_aligner import (
+import sys
+import os
+
+from .vendor.ctc_forced_aligner.ctc_forced_aligner import (
     generate_emissions,
     get_alignments,
     get_spans,
@@ -29,13 +32,14 @@ from ctc_forced_aligner import (
     postprocess_results,
     preprocess_text,
 )
-from deepmultilingualpunctuation import PunctuationModel
+from .vendor.deepmultilingualpunctuation.deepmultilingualpunctuation import PunctuationModel
 from nemo.collections.asr.models.msdd_models import NeuralDiarizer
 
-from helpers import (
+from .helpers import (
     cleanup,
     create_config,
     find_numeral_symbol_tokens,
+    generate_srt_content,
     get_realigned_ws_mapping_with_punctuation,
     get_sentences_speaker_mapping,
     get_speaker_aware_transcript,
@@ -63,6 +67,16 @@ class DiarizationResult:
     """Results from the diarization process."""
     speaker_timestamps: List[List[int]]
     processing_time: float
+
+
+@dataclass
+class PipelineResult:
+    """Complete pipeline results with all requested data."""
+    word_timestamps: List[Dict[str, Any]]
+    language: str
+    srt_content: str
+    total_time: float
+    backend: str
 
 
 @dataclass
@@ -109,8 +123,9 @@ class TranscriptionPipeline:
         
         os.makedirs(self.temp_dir, exist_ok=True)
         
+        vendor_demucs_path = os.path.join(os.path.dirname(__file__), 'vendor', 'demucs')
         return_code = os.system(
-            f'python -m demucs.separate -n htdemucs --two-stems=vocals '
+            f'cd "{vendor_demucs_path}" && python -m demucs.separate -n htdemucs --two-stems=vocals '
             f'"{self.config.audio_path}" -o "{self.temp_dir}" '
             f'--device "{self.config.device}"'
         )
@@ -450,11 +465,11 @@ class TranscriptionPipeline:
                 
         return wsm
         
-    def process(self) -> Tuple[str, str, Dict[str, float]]:
+    def process(self) -> PipelineResult:
         """
         Run the complete transcription and diarization pipeline with parallel processing.
         Returns:
-            Tuple of (transcript_path, srt_path, timing_info)
+            PipelineResult containing word timestamps, language, SRT content, and timing info
         """
         total_start_time = time.time()
 
@@ -497,29 +512,22 @@ class TranscriptionPipeline:
         wsm = get_realigned_ws_mapping_with_punctuation(wsm)
         ssm = get_sentences_speaker_mapping(wsm, diarization_result.speaker_timestamps)
 
-        # Generate output files
-        base_name = os.path.splitext(self.config.audio_path)[0]
-        transcript_path = f"{base_name}.txt"
-        srt_path = f"{base_name}.srt"
-
-        with open(transcript_path, "w", encoding="utf-8-sig") as f:
-            get_speaker_aware_transcript(ssm, f)
-
-        with open(srt_path, "w", encoding="utf-8-sig") as f:
-            write_srt(ssm, f)
+        # Generate SRT content in memory
+        srt_content = generate_srt_content(ssm)
 
         # Cleanup temporary files
         cleanup(os.path.join(os.getcwd(), self.temp_dir))
 
         # Calculate timing
         total_time = time.time() - total_start_time
-        timing_info = {
-            "transcription_time": transcription_result.processing_time,
-            "diarization_time": diarization_result.processing_time,
-            "total_time": total_time
-        }
 
-        return transcript_path, srt_path, timing_info
+        return PipelineResult(
+            word_timestamps=transcription_result.word_timestamps,
+            language=transcription_result.info.language,
+            srt_content=srt_content,
+            total_time=total_time,
+            backend=self.config.backend
+        )
 
 
 

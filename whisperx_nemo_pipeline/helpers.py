@@ -514,6 +514,24 @@ def write_srt(transcript, file):
         )
 
 
+def generate_srt_content(transcript):
+    """
+    Generate SRT content as a string instead of writing to file.
+    
+    """
+    srt_lines = []
+    for i, segment in enumerate(transcript, start=1):
+        srt_lines.append(f"{i}")
+        srt_lines.append(
+            f"{format_timestamp(segment['start_time'], always_include_hours=True, decimal_marker=',')} --> "
+            f"{format_timestamp(segment['end_time'], always_include_hours=True, decimal_marker=',')}"
+        )
+        srt_lines.append(f"{segment['speaker']}: {segment['text'].strip().replace('-->', '->')}")
+        srt_lines.append("")  # Empty line between segments
+    
+    return "\n".join(srt_lines)
+
+
 def find_numeral_symbol_tokens(tokenizer):
     numeral_symbol_tokens = [
         -1,
