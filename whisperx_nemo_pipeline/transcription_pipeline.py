@@ -499,7 +499,7 @@ class TranscriptionPipeline:
         try:
             punct_model = PunctuationModel(model="kredor/punctuate-all")
             words_list = [x["word"] for x in wsm]
-            labeled_words = punct_model.predict(words_list, chunk_size=230)
+            labeled_words = punct_model.predict(words_list)
 
             ending_puncts = ".?!"
             model_puncts = ".,;:!?"

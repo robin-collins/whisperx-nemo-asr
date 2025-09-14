@@ -54,3 +54,6 @@ temp_outputs_*/
 .specstory/
 .claude/
 .ruff_cache/
+.auditor_venv/
+.mypy_cache/
+.pf/
