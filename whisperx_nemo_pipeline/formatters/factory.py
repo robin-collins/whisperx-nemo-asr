@@ -5,6 +5,9 @@ Factory for creating output formatters.
 from typing import Dict, Type, List
 from .base import BaseFormatter
 from .srt import SRTFormatter
+from .webvtt import WebVTTFormatter
+from .plaintext import PlainTextFormatter, TimestampedTextFormatter, CleanTextFormatter
+from .csv import CSVFormatter, WordLevelCSVFormatter
 
 
 class FormatterFactory:
@@ -14,6 +17,15 @@ class FormatterFactory:
     
     _formatters: Dict[str, Type[BaseFormatter]] = {
         'srt': SRTFormatter,
+        'webvtt': WebVTTFormatter,
+        'vtt': WebVTTFormatter,  # Alias for webvtt
+        'txt': PlainTextFormatter,
+        'plaintext': PlainTextFormatter,
+        'text': PlainTextFormatter,  # Alias for plaintext
+        'timestamped': TimestampedTextFormatter,
+        'clean': CleanTextFormatter,
+        'csv': CSVFormatter,
+        'wordcsv': WordLevelCSVFormatter,
     }
 
     @classmethod

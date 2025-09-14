@@ -18,12 +18,42 @@ def save_transcription_results(result, audio_file, output_dir="output", keep_tem
     # Extract audio filename without extension for output naming
     audio_name = Path(audio_file).stem
 
-    # Save SRT content
-    srt_filename = f"{audio_name}_transcription.srt"
-    srt_filepath = output_path / srt_filename
-    with open(srt_filepath, 'w', encoding='utf-8') as f:
-        f.write(result.srt_content)
-    print(f"SRT content saved to: {srt_filepath}")
+    saved_files = {}
+
+    # Save all formatted outputs
+    for format_name, content in result.formatted_outputs.items():
+        # Determine file extension based on format
+        if format_name.lower() == "srt":
+            extension = "srt"
+        elif format_name.lower() == "webvtt":
+            extension = "vtt"
+        elif format_name.lower() == "csv":
+            extension = "csv"
+        elif format_name.lower() == "wordcsv":
+            extension = "csv"
+        else:
+            extension = "txt"  # Default extension for plaintext, timestamped, clean
+
+        # Create unique filename for each format
+        if format_name.lower() == "wordcsv":
+            filename = f"{audio_name}_word_timestamps.csv"
+        else:
+            filename = f"{audio_name}_transcription_{format_name}.{extension}"
+
+        filepath = output_path / filename
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"{format_name.upper()} content saved to: {filepath}")
+        saved_files[f"{format_name}_file"] = str(filepath)
+
+    # Save SRT content separately for backward compatibility (if not already saved above)
+    if not result.formatted_outputs or 'srt' not in result.formatted_outputs:
+        srt_filename = f"{audio_name}_transcription.srt"
+        srt_filepath = output_path / srt_filename
+        with open(srt_filepath, 'w', encoding='utf-8') as f:
+            f.write(result.srt_content)
+        print(f"SRT content saved to: {srt_filepath}")
+        saved_files["srt_file"] = str(srt_filepath)
 
     # Save word timestamps as JSON
     timestamps_filename = f"{audio_name}_word_timestamps.json"
@@ -31,6 +61,7 @@ def save_transcription_results(result, audio_file, output_dir="output", keep_tem
     with open(timestamps_filepath, 'w', encoding='utf-8') as f:
         json.dump(result.word_timestamps, f, indent=2, ensure_ascii=False)
     print(f"Word timestamps saved to: {timestamps_filepath}")
+    saved_files["timestamps_file"] = str(timestamps_filepath)
 
     # Save metadata
     metadata_filename = f"{audio_name}_metadata.json"
@@ -45,17 +76,15 @@ def save_transcription_results(result, audio_file, output_dir="output", keep_tem
         "model": "base",
         "batch_size": 4,
         "stemming": False,
-        "temp_files_kept": keep_temp_files
+        "temp_files_kept": keep_temp_files,
+        "saved_formats": list(result.formatted_outputs.keys()) if result.formatted_outputs else ["srt"]
     }
     with open(metadata_filepath, 'w', encoding='utf-8') as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
     print(f"Metadata saved to: {metadata_filepath}")
+    saved_files["metadata_file"] = str(metadata_filepath)
 
-    return {
-        "srt_file": str(srt_filepath),
-        "timestamps_file": str(timestamps_filepath),
-        "metadata_file": str(metadata_filepath)
-    }
+    return saved_files
 
 
 def test_pipeline(save_output=True, keep_temp_files=False, audio_file="audio/two-speaker-dialog.wav", backend="whisperx", model_name="large-v3-turbo", batch_size=4):
@@ -77,6 +106,13 @@ def test_pipeline(save_output=True, keep_temp_files=False, audio_file="audio/two
         backend=backend,
         stemming=False,  # Disable source separation to avoid demucs issues
         keep_temp_files=keep_temp_files,
+        output_formats=["srt", "webvtt", "plaintext", "timestamped", "clean", "csv", "wordcsv"],
+        format_options={
+            "webvtt": {"include_timestamps": True},
+            "plaintext": {"include_timestamps": True},
+            "timestamped": {"include_timestamps": True},
+            "clean": {"include_timestamps": True},
+        }
     )
 
     # Process audio
@@ -114,7 +150,11 @@ def test_pipeline(save_output=True, keep_temp_files=False, audio_file="audio/two
         print("-" * 50)
         print("Files saved:")
         for file_type, filepath in saved_files.items():
-            print(f"  {file_type}: {filepath}")
+            if file_type.endswith('_file'):
+                format_name = file_type[:-5]  # Remove '_file' suffix
+                print(f"  {format_name}: {filepath}")
+            else:
+                print(f"  {file_type}: {filepath}")
         print("-" * 50)
 
     print("Test completed successfully!")

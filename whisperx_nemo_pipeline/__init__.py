@@ -13,7 +13,17 @@ from .transcription_pipeline import (
     PipelineResult,
     create_transcription_pipeline,
 )
-from .formatters import FormatterFactory, BaseFormatter, SRTFormatter
+from .formatters import (
+    FormatterFactory, 
+    BaseFormatter, 
+    SRTFormatter,
+    WebVTTFormatter,
+    PlainTextFormatter,
+    TimestampedTextFormatter,
+    CleanTextFormatter,
+    CSVFormatter,
+    WordLevelCSVFormatter
+)
 
 __version__ = "1.0.0"
 __author__ = "Paul Borie"
@@ -29,4 +39,10 @@ __all__ = [
     "FormatterFactory",
     "BaseFormatter",
     "SRTFormatter",
+    "WebVTTFormatter",
+    "PlainTextFormatter",
+    "TimestampedTextFormatter",
+    "CleanTextFormatter",
+    "CSVFormatter",
+    "WordLevelCSVFormatter",
 ]
