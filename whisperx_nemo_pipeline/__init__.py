@@ -10,8 +10,10 @@ from .transcription_pipeline import (
     TranscriptionConfig,
     TranscriptionResult,
     DiarizationResult,
+    PipelineResult,
     create_transcription_pipeline,
 )
+from .formatters import FormatterFactory, BaseFormatter, SRTFormatter
 
 __version__ = "1.0.0"
 __author__ = "Paul Borie"
@@ -22,5 +24,9 @@ __all__ = [
     "TranscriptionConfig",
     "TranscriptionResult",
     "DiarizationResult",
+    "PipelineResult",
     "create_transcription_pipeline",
+    "FormatterFactory",
+    "BaseFormatter",
+    "SRTFormatter",
 ]

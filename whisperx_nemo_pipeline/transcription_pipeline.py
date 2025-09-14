@@ -4,6 +4,18 @@ Production-ready transcription and diarization pipeline with parallel processing
 Updated to use standard PyPI packages and GitHub repositories instead of vendor folder dependencies.
 """
 
+# NumPy 2.0 compatibility shim
+import numpy as np
+if not hasattr(np, 'sctypes'):
+    # Restore np.sctypes for backward compatibility with older packages
+    np.sctypes = {
+        'int': [np.int8, np.int16, np.int32, np.int64],
+        'uint': [np.uint8, np.uint16, np.uint32, np.uint64], 
+        'float': [np.float32, np.float64],
+        'complex': [np.complex64, np.complex128],
+        'others': [bool, object, bytes, str]
+    }
+
 import logging
 import multiprocessing as mp
 import os
@@ -11,7 +23,7 @@ import re
 import time
 import warnings
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
 import faster_whisper
@@ -76,6 +88,7 @@ from .helpers import (
     process_language_arg,
     punct_model_langs,
 )
+from .formatters import FormatterFactory
 
 
 @dataclass
@@ -103,9 +116,10 @@ class PipelineResult:
 
     word_timestamps: List[Dict[str, Any]]
     language: str
-    srt_content: str
-    total_time: float
-    backend: str
+    srt_content: str  # Kept for backward compatibility
+    formatted_outputs: Dict[str, str] = field(default_factory=dict)
+    total_time: float = 0.0
+    backend: str = ""
 
 
 @dataclass
@@ -122,6 +136,8 @@ class TranscriptionConfig:
     temp_dir: Optional[str] = None
     keep_temp_files: bool = False
     backend: str = "faster_whisper"  # "faster_whisper" or "whisperx"
+    output_formats: List[str] = field(default_factory=lambda: ['srt'])
+    format_options: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -533,8 +549,8 @@ class TranscriptionPipeline:
         # Prepare audio before forking
         self.vocal_target = self._prepare_audio()
 
-        # On Linux/macOS, use 'fork' for near-instant process startup
-        ctx = mp.get_context("fork")
+        # Use 'spawn' for CUDA compatibility with newer PyTorch versions
+        ctx = mp.get_context("spawn")
 
         # Use ProcessPoolExecutor for true parallelism with faster startup
         with ProcessPoolExecutor(max_workers=2, mp_context=ctx) as executor:
@@ -563,8 +579,26 @@ class TranscriptionPipeline:
         wsm = get_realigned_ws_mapping_with_punctuation(wsm)
         ssm = get_sentences_speaker_mapping(wsm, diarization_result.speaker_timestamps)
 
-        # Generate SRT content in memory
-        srt_content = generate_srt_content(ssm)
+        # Generate formatted outputs using the formatter system
+        formatted_outputs = {}
+        srt_content = ""  # For backward compatibility
+        
+        for format_name in self.config.output_formats:
+            try:
+                formatter = FormatterFactory.create_formatter(format_name)
+                formatted_output = formatter.format(ssm)
+                formatted_outputs[format_name] = formatted_output
+                
+                # Keep SRT content for backward compatibility
+                if format_name.lower() == 'srt':
+                    srt_content = formatted_output
+            except ValueError as e:
+                logging.warning(f"Skipping unsupported format '{format_name}': {e}")
+
+        # If SRT wasn't explicitly requested but we need backward compatibility, generate it
+        if not srt_content and 'srt' not in [fmt.lower() for fmt in self.config.output_formats]:
+            srt_formatter = FormatterFactory.create_formatter('srt')
+            srt_content = srt_formatter.format(ssm)
 
         # Cleanup temporary files (unless user wants to keep them)
         if not self.config.keep_temp_files:
@@ -580,6 +614,7 @@ class TranscriptionPipeline:
             word_timestamps=transcription_result.word_timestamps,
             language=transcription_result.info.language,
             srt_content=srt_content,
+            formatted_outputs=formatted_outputs,
             total_time=total_time,
             backend=self.config.backend,
         )
@@ -631,6 +666,8 @@ def create_transcription_pipeline(
     suppress_numerals: bool = False,
     backend: str = "faster_whisper",
     keep_temp_files: bool = False,
+    output_formats: Optional[List[str]] = None,
+    format_options: Optional[Dict[str, Any]] = None,
 ) -> TranscriptionPipeline:
     """
     Factory function to create a transcription pipeline with sensible defaults.
@@ -645,12 +682,20 @@ def create_transcription_pipeline(
         suppress_numerals: Whether to suppress numerical digits (default: False)
         backend: Transcription backend ('faster_whisper' or 'whisperx', default: faster_whisper)
         keep_temp_files: Whether to keep temporary files after processing (default: False)
+        output_formats: List of output formats to generate (default: ['srt'])
+        format_options: Options for specific formatters (default: empty dict)
 
     Returns:
         Configured TranscriptionPipeline instance
     """
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Set defaults for new parameters
+    if output_formats is None:
+        output_formats = ['srt']
+    if format_options is None:
+        format_options = {}
 
     config = TranscriptionConfig(
         audio_path=audio_path,
@@ -662,6 +707,8 @@ def create_transcription_pipeline(
         suppress_numerals=suppress_numerals,
         backend=backend,
         keep_temp_files=keep_temp_files,
+        output_formats=output_formats,
+        format_options=format_options,
     )
 
     return TranscriptionPipeline(config)

@@ -58,25 +58,23 @@ def save_transcription_results(result, audio_file, output_dir="output", keep_tem
     }
 
 
-def test_pipeline(save_output=True, keep_temp_files=False):
-    """Test the transcription pipeline with WhisperX backend."""
-
-    audio_file = "audio/two-speaker-dialog.wav"
+def test_pipeline(save_output=True, keep_temp_files=False, audio_file="audio/two-speaker-dialog.wav", backend="whisperx", model_name="large-v3-turbo", batch_size=4):
+    """Test the transcription pipeline with configurable parameters."""
 
     print("Testing transcription pipeline with:")
     print(f"  Audio file: {audio_file}")
-    print("  Backend: whisperx")
-    print("  Model: base")
-    print("  Batch size: 4")
+    print(f"  Backend: {backend}")
+    print(f"  Model: {model_name}")
+    print(f"  Batch size: {batch_size}")
     print(f"  Keep temp files: {keep_temp_files}")
     print("-" * 50)
 
     # Create pipeline
     pipeline = create_transcription_pipeline(
         audio_path=audio_file,
-        model_name="base",
-        batch_size=4,
-        backend="whisperx",
+        model_name=model_name,
+        batch_size=batch_size,
+        backend=backend,
         stemming=False,  # Disable source separation to avoid demucs issues
         keep_temp_files=keep_temp_files,
     )
@@ -146,4 +144,4 @@ if __name__ == "__main__":
         print("  python test_pipeline.py --keep-temp --no-save  # Don't save, keep temp files")
         sys.exit(0)
 
-    result = test_pipeline(save_output=save_output, keep_temp_files=keep_temp_files)
+    result = test_pipeline(save_output=save_output, keep_temp_files=keep_temp_files, audio_file="audio/two-speaker-dialog.wav", backend="whisperx", model_name="distil-large-v3.5", batch_size=5)

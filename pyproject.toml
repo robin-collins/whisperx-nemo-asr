@@ -10,17 +10,17 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 dependencies = [
-    # Core Scientific Computing - Pin NumPy to 1.x for compatibility
-    "numpy>=1.24.0,<2.0.0",
+    # Core Scientific Computing
+    "numpy>=1.24.0",
     "scipy>=1.10.0",
     "pandas>=2.0.0",
     # Core ML and Audio Processing - Use PyTorch 2.1.2 with CUDA
-    "torch==2.3.0",
-    "torchaudio==2.3.0",
-    "torchvision==0.18.0",
+    "torch==2.5.1",
+    "torchaudio==2.5.1",
+    "torchvision==0.20.1",
     # Audio and ML libraries
     "faster-whisper>=1.0.0",
-    "whisperx>=3.1.0",
+    "whisperx==3.4.2",
     # CTC Forced Aligner from GitHub (replaces vendor folder)
     "ctc-forced-aligner @ git+https://github.com/MahmoudAshraf97/ctc-forced-aligner.git",
     # Audio Processing and Source Separation
@@ -40,12 +40,12 @@ dependencies = [
     "regex>=2023.0.0",
     # Transformers and NLP
     "transformers>=4.30.0,<4.50.0",
-    "tokenizers>=0.13.0,<0.20.0",
+    "tokenizers>=0.13.0,<0.22.0",
     "huggingface-hub>=0.16.0",
     "datasets>=2.14.0",
     "pyarrow>=10.0.0,<18.0.0",
     # Audio Libraries - Pin pyannote to versions compatible with NumPy 1.x
-    "pyannote.audio>=3.1.0,<3.3.0",
+    "pyannote.audio>=3.1.0,<=3.3.2",
     "pyannote.core>=5.0.0",
     "pyannote.pipeline>=3.0.0",
     # Progress and Utilities
