@@ -14,12 +14,12 @@ A production-ready transcription and diarization pipeline with parallel processi
 ## Installation
 
 ```bash
-pip install whisperx-nemo-pipeline
+pip install whisperx-nemo-asr
 ```
 
 **With constraints (recommended for production):**
 ```bash
-pip install whisperx-nemo-pipeline -c constraints.txt
+pip install whisperx-nemo-asr -c constraints.txt
 ```
 
 ## Quick Start
@@ -81,9 +81,9 @@ transcript_path, srt_path, timing_info = pipeline.process()
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.11+
 - CUDA-capable GPU (recommended)
-- See `requirements.txt` for full dependency list
+- See `pyproject.toml` for full dependency list
 
 ## License
 

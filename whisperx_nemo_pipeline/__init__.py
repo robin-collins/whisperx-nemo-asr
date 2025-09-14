@@ -19,7 +19,7 @@ __email__ = "paul.borie1@gmail.com"
 
 __all__ = [
     "TranscriptionPipeline",
-    "TranscriptionConfig", 
+    "TranscriptionConfig",
     "TranscriptionResult",
     "DiarizationResult",
     "create_transcription_pipeline",
