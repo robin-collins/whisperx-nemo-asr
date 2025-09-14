@@ -251,13 +251,14 @@ langs_to_iso = {
 
 def create_config(output_dir):
     DOMAIN_TYPE = "telephonic"
-    CONFIG_LOCAL_DIRECTORY = "nemo_msdd_configs"
+    # Use the existing config files from the package directory
+    CONFIG_LOCAL_DIRECTORY = os.path.join(os.path.dirname(__file__), "nemo_msdd_configs")
     CONFIG_FILE_NAME = f"diar_infer_{DOMAIN_TYPE}.yaml"
     MODEL_CONFIG_PATH = os.path.join(CONFIG_LOCAL_DIRECTORY, CONFIG_FILE_NAME)
+
+    # The config files should already exist in the package
     if not os.path.exists(MODEL_CONFIG_PATH):
-        os.makedirs(CONFIG_LOCAL_DIRECTORY, exist_ok=True)
-        CONFIG_URL = f"https://raw.githubusercontent.com/NVIDIA/NeMo/main/examples/speaker_tasks/diarization/conf/inference/{CONFIG_FILE_NAME}"
-        MODEL_CONFIG_PATH = wget.download(CONFIG_URL, MODEL_CONFIG_PATH)
+        raise FileNotFoundError(f"Config file not found: {MODEL_CONFIG_PATH}")
 
     config = OmegaConf.load(MODEL_CONFIG_PATH)
 
@@ -338,9 +339,8 @@ sentence_ending_punctuations = ".?!"
 
 
 def get_first_word_idx_of_sentence(word_idx, word_list, speaker_list, max_words):
-    is_word_sentence_end = (
-        lambda x: x >= 0 and word_list[x][-1] in sentence_ending_punctuations
-    )
+    def is_word_sentence_end(x):
+        return (x >= 0 and word_list[x][-1] in sentence_ending_punctuations)
     left_idx = word_idx
     while (
         left_idx > 0
@@ -354,9 +354,8 @@ def get_first_word_idx_of_sentence(word_idx, word_list, speaker_list, max_words)
 
 
 def get_last_word_idx_of_sentence(word_idx, word_list, max_words):
-    is_word_sentence_end = (
-        lambda x: x >= 0 and word_list[x][-1] in sentence_ending_punctuations
-    )
+    def is_word_sentence_end(x):
+        return (x >= 0 and word_list[x][-1] in sentence_ending_punctuations)
     right_idx = word_idx
     while (
         right_idx < len(word_list) - 1
@@ -375,10 +374,9 @@ def get_last_word_idx_of_sentence(word_idx, word_list, max_words):
 def get_realigned_ws_mapping_with_punctuation(
     word_speaker_mapping, max_words_in_sentence=50
 ):
-    is_word_sentence_end = (
-        lambda x: x >= 0
-        and word_speaker_mapping[x]["word"][-1] in sentence_ending_punctuations
-    )
+    def is_word_sentence_end(x):
+        return (x >= 0
+            and word_speaker_mapping[x]["word"][-1] in sentence_ending_punctuations)
     wsp_len = len(word_speaker_mapping)
 
     words_list, speaker_list = [], []
@@ -517,7 +515,7 @@ def write_srt(transcript, file):
 def generate_srt_content(transcript):
     """
     Generate SRT content as a string instead of writing to file.
-    
+
     """
     srt_lines = []
     for i, segment in enumerate(transcript, start=1):
@@ -526,9 +524,11 @@ def generate_srt_content(transcript):
             f"{format_timestamp(segment['start_time'], always_include_hours=True, decimal_marker=',')} --> "
             f"{format_timestamp(segment['end_time'], always_include_hours=True, decimal_marker=',')}"
         )
-        srt_lines.append(f"{segment['speaker']}: {segment['text'].strip().replace('-->', '->')}")
+        srt_lines.append(
+            f"{segment['speaker']}: {segment['text'].strip().replace('-->', '->')}"
+        )
         srt_lines.append("")  # Empty line between segments
-    
+
     return "\n".join(srt_lines)
 
 
